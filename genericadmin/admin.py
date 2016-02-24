@@ -11,6 +11,7 @@ except ImportError:
     from django.contrib.contenttypes.fields import GenericForeignKey
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.urlresolvers import reverse, NoReverseMatch
 try:
     from django.utils.encoding import force_text
 except ImportError:
@@ -26,6 +27,7 @@ from  django.core.exceptions import ObjectDoesNotExist
 
 JS_PATH = getattr(settings, 'GENERICADMIN_JS', 'genericadmin/js/')
 
+
 class BaseGenericModelAdmin(object):
     class Media:
         js = ()
@@ -34,6 +36,7 @@ class BaseGenericModelAdmin(object):
     generic_fk_fields = []
     content_type_blacklist = []
     content_type_whitelist = []
+    change_form_template = 'genericadmin/change_form.html'
 
     def __init__(self, model, admin_site):
         try:
@@ -87,10 +90,10 @@ class BaseGenericModelAdmin(object):
                 return self.admin_site.admin_view(view)(*args, **kwargs)
             return update_wrapper(wrapper, view)
 
-        custom_urls = patterns('',
+        custom_urls = [
             url(r'^obj-data/$', wrap(self.generic_lookup), name='admin_genericadmin_obj_lookup'),
             url(r'^genericadmin-init/$', wrap(self.genericadmin_js_init), name='admin_genericadmin_init'),
-        )
+        ]
         return custom_urls + super(BaseGenericModelAdmin, self).get_urls()
 
     def genericadmin_js_init(self, request):
@@ -102,9 +105,12 @@ class BaseGenericModelAdmin(object):
                 params = url_params_from_lookup_dict(params)
                 if self.content_type_whitelist:
                     if val in self.content_type_whitelist:
-                        obj_dict[c.id] = (val, params)
+                        obj_dict[c.id] = (reverse('admin:%s_%s_changelist' % (c.app_label, c.model)), params)
                 elif val not in self.content_type_blacklist:
-                    obj_dict[c.id] = (val, params)
+                    try:
+                        obj_dict[c.id] = (reverse('admin:%s_%s_changelist' % (c.app_label, c.model)), params)
+                    except NoReverseMatch:
+                        pass
 
             data = {
                 'url_array': obj_dict,
@@ -142,6 +148,25 @@ class BaseGenericModelAdmin(object):
             resp = ''
         return HttpResponse(resp, content_type='application/json')
 
+    def add_view(self, request, form_url='', extra_context=None):
+        if extra_context is None:
+            extra_context = {}
+
+        extra_context['init_url'] = reverse('admin:admin_genericadmin_init')
+        extra_context['obj_url'] = reverse('admin:admin_genericadmin_obj_lookup')
+        print(extra_context)
+        return super(BaseGenericModelAdmin, self).add_view(
+            request, form_url, extra_context)
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        if extra_context is None:
+            extra_context = {}
+
+        extra_context['init_url'] = reverse('admin:admin_genericadmin_init')
+        extra_context['obj_url'] = reverse('admin:admin_genericadmin_obj_lookup')
+        print(extra_context)
+        return super(BaseGenericModelAdmin, self).change_view(
+            request, object_id, form_url, extra_context)
 
 
 class GenericAdminModelAdmin(BaseGenericModelAdmin, admin.ModelAdmin):
