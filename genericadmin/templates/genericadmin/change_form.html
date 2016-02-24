@@ -1,0 +1,11 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script type="text/javascript">
+        window.genericadmin = {
+            init_url: '{{ init_url }}',
+            obj_url: '{{ obj_url }}',
+        };
+    </script>
+{% endblock %}
