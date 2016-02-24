@@ -164,7 +164,7 @@ class BaseGenericModelAdmin(object):
 
         extra_context['init_url'] = reverse('admin:admin_genericadmin_init')
         extra_context['obj_url'] = reverse('admin:admin_genericadmin_obj_lookup')
-        print(extra_context)
+
         return super(BaseGenericModelAdmin, self).change_view(
             request, object_id, form_url, extra_context)
 
